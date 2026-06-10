@@ -1,0 +1,993 @@
+/* ══════════════════════════════════════════
+   ポケカ確率計算ツール — Pokémon TCG Style
+   ══════════════════════════════════════════ */
+
+/* ── Reset & Custom Properties ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  --bg: #1E3A8A;
+  --surface: #254196;
+  --surface-alt: #2B4A9E;
+  --surface-hover: #3155AA;
+  --input-bg: #183078;
+  --border: rgba(255, 255, 255, 0.15);
+  --border-light: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.25);
+
+  --gold: #D4A843;
+  --gold-light: #E8C95A;
+  --gold-dim: rgba(212, 168, 67, 0.25);
+  --gold-glow: rgba(212, 168, 67, 0.10);
+
+  --poke-red: #DC2626;
+  --poke-red-hover: #B91C1C;
+  --poke-red-glow: rgba(220, 38, 38, 0.25);
+
+  --text: #F0ECE4;
+  --text-muted: #B0BFE0;
+  --text-bright: #FFFFFF;
+
+  --success: #22C55E;
+  --danger: #EF4444;
+  --warning: #F59E0B;
+
+  --energy-grass: rgba(80, 200, 80, 0.10);
+  --energy-grass-border: rgba(80, 200, 80, 0.22);
+  --energy-lightning: rgba(255, 210, 50, 0.10);
+  --energy-lightning-border: rgba(255, 210, 50, 0.22);
+  --energy-psychic: rgba(180, 80, 255, 0.10);
+  --energy-psychic-border: rgba(180, 80, 255, 0.22);
+  --energy-fire: rgba(255, 120, 30, 0.12);
+  --energy-fire-border: rgba(255, 120, 30, 0.28);
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
+  background: var(--bg);
+  background-image: radial-gradient(ellipse at 50% 0%, rgba(50, 90, 180, 0.3) 0%, transparent 50%);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── App Layout ── */
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 12px 16px 0;
+}
+
+/* ── Header ── */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 0 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pokeball-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f0f0f0;
+  border: 2.5px solid #444;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.35);
+  overflow: hidden;
+}
+
+.pokeball-icon::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 45%;
+  background: var(--poke-red);
+  border-bottom: 3px solid #444;
+}
+
+.pokeball-icon::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  background: #f0f0f0;
+  border: 3px solid #444;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.app-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold), #b8922f);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+}
+
+.app-subtitle {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+
+.lang-toggle {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  color: var(--gold);
+  padding: 5px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.82rem;
+  transition: all 0.2s;
+}
+
+.lang-toggle:hover {
+  background: var(--surface-hover);
+  border-color: var(--gold-dim);
+}
+
+/* ── Tabs ── */
+.tab-nav {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 4px;
+  border: 1px solid var(--border);
+}
+
+.tab-nav button {
+  flex: 1;
+  padding: 9px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 7px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.tab-nav button.active {
+  background: var(--poke-red);
+  color: var(--text-bright);
+  box-shadow: 0 2px 8px var(--poke-red-glow);
+}
+
+.tab-nav button:hover:not(.active) {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+/* ── Panel (Card-style) ── */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.panel h2 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--gold-light);
+}
+
+/* ── Guide Panel ── */
+.guide-panel {
+  border-top-color: var(--gold);
+}
+
+.guide-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.guide-toggle-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--gold-light);
+}
+
+.guide-chevron {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  transition: transform 0.3s;
+  display: inline-block;
+}
+
+.guide-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.guide-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.3s ease;
+}
+
+.guide-body.collapsed {
+  grid-template-rows: 0fr;
+}
+
+.guide-body-inner {
+  overflow: hidden;
+}
+
+.guide-steps {
+  margin: 12px 0 12px 20px;
+  font-size: 0.82rem;
+  color: var(--text);
+  line-height: 1.9;
+}
+
+.guide-steps li {
+  margin-bottom: 2px;
+}
+
+.guide-steps li::marker {
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.guide-note {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-top: 4px;
+}
+
+.guide-note-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--gold);
+  margin-bottom: 4px;
+}
+
+.guide-note p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+/* ── Mode Toggle ── */
+.mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--input-bg);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+}
+
+.mode-toggle button {
+  flex: 1;
+  padding: 6px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.mode-toggle button.active {
+  background: var(--poke-red);
+  color: var(--text-bright);
+}
+
+.mode-desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  padding-left: 2px;
+}
+
+/* ── Input Row ── */
+.input-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.input-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex: 1;
+  min-width: 90px;
+}
+
+/* ── Inputs ── */
+input[type="text"],
+select {
+  background: var(--input-bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input[type="text"]:focus,
+select:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold-dim);
+}
+
+/* ── Deck Summary ── */
+.deck-summary {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.error-text {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+/* ── Card Item ── */
+.card-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.card-name-input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.card-count-input {
+  width: 60px !important;
+}
+
+.card-unit {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ── Combination Block ── */
+.combination-block {
+  margin-bottom: 14px;
+  padding: 12px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+}
+
+.combination-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.combination-header input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--poke-red);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.combo-name-input {
+  flex: 1;
+  font-weight: 600;
+}
+
+/* ── Combo Collapse ── */
+.combo-collapse-btn {
+  background: none;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.combo-collapse-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.combo-chevron {
+  font-size: 0.65rem;
+  display: inline-block;
+  transition: transform 0.3s;
+}
+
+.combo-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.combo-body {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 0.3s ease;
+  margin-top: 10px;
+}
+
+.combo-body.collapsed {
+  grid-template-rows: 0fr;
+  margin-top: 0;
+}
+
+.combo-body-inner {
+  overflow: hidden;
+}
+
+/* ── Condition Group (Energy-type colors) ── */
+.cond-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  margin-bottom: 6px;
+  background: var(--surface);
+}
+
+.cond-group.depth-1 {
+  background: var(--energy-grass);
+  border-color: var(--energy-grass-border);
+}
+
+.cond-group.depth-2 {
+  background: var(--energy-lightning);
+  border-color: var(--energy-lightning-border);
+}
+
+.cond-group.depth-3 {
+  background: var(--energy-psychic);
+  border-color: var(--energy-psychic-border);
+}
+
+.cond-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.op-select {
+  font-weight: 800;
+  font-size: 0.78rem;
+  padding: 4px 8px !important;
+  min-width: 60px;
+  color: var(--gold-light);
+}
+
+.cond-group-body {
+  padding-left: 4px;
+}
+
+.condition-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.condition-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--poke-red);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.logic-label {
+  text-align: center;
+  color: var(--gold);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  margin: 3px 0;
+  opacity: 0.7;
+}
+
+.cond-group-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.cond-card-select {
+  flex: 1;
+  min-width: 80px;
+}
+
+.cond-count-input {
+  width: 50px !important;
+}
+
+.cond-comparison-select {
+  width: auto;
+  min-width: 70px;
+}
+
+.cond-scope-select {
+  width: auto;
+  min-width: 75px;
+  font-size: 0.78rem;
+}
+
+.btn-add-small {
+  background: transparent;
+  border: 1px dashed rgba(212, 168, 67, 0.45);
+  color: var(--gold);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  transition: all 0.2s;
+}
+
+.btn-add-small:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: var(--gold-glow);
+}
+
+.btn-add-small:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ── Draw Check Block (Fire energy style) ── */
+.draw-check-block {
+  border: 1px solid var(--energy-fire-border);
+  border-radius: var(--radius-sm);
+  padding: 8px;
+  margin-bottom: 6px;
+  background: var(--energy-fire);
+}
+
+.draw-check-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.draw-check-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #ff8c1a;
+  background: rgba(255, 140, 26, 0.15);
+  padding: 2px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  border: 1px solid rgba(255, 140, 26, 0.25);
+}
+
+.dc-look-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.dc-look-input {
+  width: 50px !important;
+}
+
+.btn-add-dc {
+  color: #ff8c1a !important;
+  border-color: rgba(255, 140, 26, 0.25) !important;
+}
+
+.btn-add-dc:hover:not(:disabled) {
+  border-color: #ff8c1a !important;
+  background: rgba(255, 140, 26, 0.08) !important;
+}
+
+/* ── Combo Separator ── */
+.combo-separator {
+  text-align: center;
+  color: var(--gold);
+  font-weight: 800;
+  font-size: 0.82rem;
+  margin: 14px 0 6px;
+  letter-spacing: 3px;
+}
+
+/* ── Conditional Draw Section ── */
+.conditional-draw-section {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.btn-conditional {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.78rem;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.btn-conditional:hover {
+  border-color: #ff8c1a;
+  color: #ff8c1a;
+}
+
+.btn-conditional.active {
+  border-color: #ff8c1a;
+  color: #ff8c1a;
+  background: rgba(255, 140, 26, 0.06);
+}
+
+.conditional-draw-body {
+  margin-top: 8px;
+  padding: 10px;
+  background: var(--energy-fire);
+  border: 1px solid var(--energy-fire-border);
+  border-radius: var(--radius-sm);
+}
+
+.cd-settings {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.cd-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex: 1;
+}
+
+.cd-settings input {
+  width: 100%;
+}
+
+/* ── Combine Mode ── */
+.combine-mode {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  font-size: 0.82rem;
+}
+
+.combine-mode label {
+  color: var(--text-muted);
+}
+
+/* ── Buttons ── */
+.btn-add {
+  background: transparent;
+  border: 1px dashed rgba(212, 168, 67, 0.45);
+  color: var(--gold);
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  width: 100%;
+  margin-top: 6px;
+  transition: all 0.2s;
+}
+
+.btn-add:hover:not(:disabled) {
+  border-color: var(--gold);
+  background: var(--gold-glow);
+}
+
+.btn-add:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-delete {
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: var(--danger);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.72rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--danger);
+}
+
+.btn-calc {
+  background: var(--poke-red);
+  border: none;
+  color: var(--text-bright);
+  padding: 10px 24px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 700;
+  transition: all 0.2s;
+  box-shadow: 0 2px 12px var(--poke-red-glow);
+}
+
+.btn-calc:hover:not(:disabled) {
+  background: var(--poke-red-hover);
+  box-shadow: 0 4px 18px var(--poke-red-glow);
+}
+
+.btn-calc:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.main-calc {
+  width: 100%;
+  margin-top: 12px;
+  padding: 14px;
+  font-size: 1.05rem;
+}
+
+/* ── MC Settings ── */
+.mc-settings {
+  margin-bottom: 8px;
+}
+
+.mc-settings label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.mc-settings input {
+  width: 120px !important;
+}
+
+/* ── Result Panel (Holo card effect) ── */
+.result-panel {
+  border-color: var(--gold);
+  border-top: 3px solid var(--gold-light);
+  position: relative;
+  overflow: hidden;
+}
+
+.result-panel::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    rgba(232, 201, 90, 0.08) 38%,
+    rgba(180, 140, 255, 0.10) 44%,
+    rgba(232, 201, 90, 0.18) 50%,
+    rgba(100, 220, 180, 0.10) 56%,
+    rgba(232, 201, 90, 0.08) 62%,
+    transparent 70%
+  );
+  animation: holo-sweep 3s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.result-panel::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    transparent 40%,
+    rgba(232, 201, 90, 0.06) 50%,
+    transparent 60%
+  );
+  animation: holo-shimmer 2s ease-in-out infinite alternate-reverse;
+  pointer-events: none;
+}
+
+@keyframes holo-sweep {
+  0% { transform: translateX(-50%) rotate(15deg); }
+  100% { transform: translateX(50%) rotate(15deg); }
+}
+
+@keyframes holo-shimmer {
+  0% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+.result-box {
+  padding: 20px 16px;
+  background: var(--input-bg);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.result-box.calculating {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+}
+
+.result-probability {
+  font-size: 2.2rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold), #e0b535);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 6px;
+}
+
+.result-method {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.reverse-result {
+  text-align: left;
+  margin-top: 12px;
+}
+
+.reverse-result strong {
+  font-size: 1.2rem;
+  color: var(--gold-light);
+}
+
+.result-detail {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+/* ── Hint ── */
+.hint {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+/* ── Spinner ── */
+.spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid var(--border);
+  border-top-color: var(--poke-red);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Footer ── */
+.app-footer {
+  margin-top: 24px;
+  padding: 0;
+}
+
+.energy-scatter {
+  position: relative;
+  height: 80px;
+  overflow: hidden;
+}
+
+/* Energy icon images in footer */
+.energy-marble {
+  position: absolute;
+  object-fit: contain;
+  opacity: 0.55;
+  pointer-events: none;
+  user-select: none;
+}
+
+.footer-text {
+  text-align: center;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  opacity: 0.65;
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* ── Responsive ── */
+@media (max-width: 500px) {
+  .app { padding: 8px 10px 0; }
+  .app-title { font-size: 1.15rem; }
+  .pokeball-icon { width: 30px; height: 30px; }
+  .pokeball-icon::after { width: 10px; height: 10px; }
+  .input-row { gap: 8px; }
+  .card-item, .condition-row { gap: 4px; }
+  .mode-toggle button { font-size: 0.7rem; padding: 5px 6px; }
+  .condition-row { flex-wrap: wrap; }
+  .cond-group { padding: 6px; }
+  .cd-settings { flex-direction: column; gap: 8px; }
+  .result-probability { font-size: 1.8rem; }
+  .energy-scatter { height: 60px; }
+  .guide-steps { font-size: 0.78rem; margin-left: 16px; }
+}
