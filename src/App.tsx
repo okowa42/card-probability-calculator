@@ -4,6 +4,7 @@ import { t } from './i18n';
 import { calculate } from './utils/math';
 import { DeckSettingsPanel } from './components/DeckSettings';
 import { CardList } from './components/CardList';
+import { DeckImport } from './components/DeckImport';
 import { CombinationList } from './components/CombinationList';
 import { ResultDisplay } from './components/ResultDisplay';
 import { ReverseCalculator } from './components/ReverseCalculator';
@@ -133,6 +134,8 @@ export default function App() {
             totalCards={totalCards}
             lang={lang}
           />
+
+          <DeckImport onImport={setCards} lang={lang} />
 
           <CardList cards={cards} onChange={setCards} lang={lang} />
 

@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "npx tsx scripts/dev-api.ts",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },

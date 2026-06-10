@@ -70,6 +70,11 @@ const translations = {
     collapse: '閉じる',
     expand: '開く',
     disclaimer: 'このツールは非公式のファンメイドツールです。ポケモン・Pokémonは株式会社ポケモン・任天堂・クリーチャーズ・ゲームフリークの登録商標です。',
+    deckImportHint: '公式アプリのデッキコードを使ってカードを一括登録（既存のカード設定は上書きされます）',
+    deckCodePlaceholder: 'デッキコードを入力',
+    deckImportBtn: '読み込む',
+    deckImportLoading: '取得中...',
+    deckImportError: 'デッキの読み込みに失敗しました',
   },
   en: {
     title: 'Pokémon TCG Calculator',
@@ -140,6 +145,11 @@ const translations = {
     collapse: 'Collapse',
     expand: 'Expand',
     disclaimer: 'This is an unofficial fan-made tool. Pokémon is a registered trademark of The Pokémon Company, Nintendo, Creatures, and Game Freak.',
+    deckImportHint: 'Import cards from the official app deck code (existing cards will be replaced)',
+    deckCodePlaceholder: 'Enter deck code',
+    deckImportBtn: 'Import',
+    deckImportLoading: 'Loading...',
+    deckImportError: 'Failed to import deck',
   },
 } as const;
 
